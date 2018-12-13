@@ -53,6 +53,7 @@ struct log_histogram_options {
         assert(pow2_rank(max_size - min_size + 1) + sub_bucket_shift < std::numeric_limits<size_t>::digits);
     }
 
+    // TODO(jeff.ding): return value of bucket_of may exceeds number_of_buckets
     constexpr size_t bucket_of(size_t value) const {
         const auto min_mask = -size_t(value >= min_size); // 0 when below min_size, all bits on otherwise
         value = value - min_size + 1;
@@ -225,8 +226,11 @@ public:
     void push(T& v) {
         auto b = opts.bucket_of(traits::hist_key(v));
         traits::cache_bucket(v, b);
-        _buckets[b].push_front(v);
-        _watermark = std::max(ssize_t(b), _watermark);
+        // TODO(jeff.ding): return value of bucket_of may exceeds number_of_buckets
+	if (b < opts.number_of_buckets()) {
+            _buckets[b].push_front(v);
+            _watermark = std::max(ssize_t(b), _watermark);
+	}
     }
     // Adjusts the histogram when the specified element becomes larger.
     void adjust_up(T& v) {
